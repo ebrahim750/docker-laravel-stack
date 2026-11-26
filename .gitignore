@@ -1,0 +1,7 @@
+.env
+*.log
+storage/logs/*
+!storage/logs/.gitkeep
+docker/certs/*
+!docker/certs/.gitkeep
+.DS_Store

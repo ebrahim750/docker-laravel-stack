@@ -1,0 +1,40 @@
+---
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    name: validate compose and image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the rendered compose file
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_PASSWORD=$/DB_PASSWORD=ci-password/' .env
+          sed -i 's/^DB_ROOT_PASSWORD=$/DB_ROOT_PASSWORD=ci-root-password/' .env
+          sed -i 's/^REDIS_PASSWORD=$/REDIS_PASSWORD=ci-password/' .env
+          docker compose config --quiet
+          echo "compose file renders"
+
+      - name: Build the application image
+        run: docker build -f docker/php/Dockerfile --target runtime -t laravel/app:ci .
+
+      - name: Verify PHP extensions are present
+        run: |
+          docker run --rm laravel/app:ci php -m | tee /tmp/mods
+          for ext in pdo_mysql redis intl bcmath gd opcache zip pcntl; do
+            grep -qi "^${ext}$" /tmp/mods || { echo "missing extension: $ext"; exit 1; }
+          done
+
+      - name: Validate nginx configuration
+        run: |
+          docker run --rm \
+            -v "$PWD/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            -v "$PWD/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.29-alpine nginx -t
