@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Fixture stand-in for Laravel's artisan entrypoint. The queue and scheduler
+// containers run `php artisan queue:work` / `schedule:work`, so without this file
+// they restart-loop and make a healthy stack look broken.
+$command = $argv[1] ?? '';
+
+if (in_array($command, ['queue:work', 'schedule:work'], true)) {
+    fwrite(STDOUT, "fixture artisan: {$command} started\n");
+    while (true) {
+        sleep(60);
+    }
+}
+
+fwrite(STDOUT, "fixture artisan: {$command}\n");
