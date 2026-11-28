@@ -22,8 +22,21 @@ jobs:
           docker compose config --quiet
           echo "compose file renders"
 
+      # This repo is a template: it ships no application of its own, so the image
+      # is built against a minimal fixture rather than the repository root.
+      - name: Assemble a build context
+        run: |
+          mkdir -p "$RUNNER_TEMP/ctx"
+          cp -r docker "$RUNNER_TEMP/ctx/"
+          cp -r fixture/. "$RUNNER_TEMP/ctx/"
+
       - name: Build the application image
-        run: docker build -f docker/php/Dockerfile --target runtime -t laravel/app:ci .
+        run: |
+          docker build \
+            -f "$RUNNER_TEMP/ctx/docker/php/Dockerfile" \
+            --target runtime \
+            -t laravel/app:ci \
+            "$RUNNER_TEMP/ctx"
 
       - name: Verify PHP extensions are present
         run: |

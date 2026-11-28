@@ -1,0 +1,8 @@
+{
+  "name": "fixture-app",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "mkdir -p public/build && printf '{\"built\":true}' > public/build/manifest.json"
+  }
+}

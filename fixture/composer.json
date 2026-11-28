@@ -1,0 +1,11 @@
+{
+  "name": "laravel-stack/fixture-app",
+  "description": "Minimal application used by CI to prove the image builds.",
+  "type": "project",
+  "require": {},
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    }
+  }
+}

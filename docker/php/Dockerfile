@@ -35,25 +35,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Install the pool configuration the healthcheck depends on. `zz-` prefix so it
+# wins over the image's default www.conf, which does not define the ping path.
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-app.conf
+
 # -------------------------------------------------------------- vendor --------
 FROM base AS vendor
 WORKDIR /app
-COPY composer.json composer.lock ./
-RUN composer install \
-        --no-dev \
-        --no-scripts \
-        --no-autoloader \
-        --prefer-dist \
-        --no-interaction \
-        --no-progress
+# Globs so the stack can be dropped into a project that has no lock file yet.
+# Production images should build from a committed composer.lock; CI builds the
+# fixture app, which has none, to prove the Dockerfile works either way.
+COPY composer.json composer.lock* ./
+RUN if [ -f composer.lock ]; then \
+        composer install --no-dev --no-scripts --no-autoloader --prefer-dist \
+            --no-interaction --no-progress; \
+    else \
+        composer update --no-dev --no-scripts --no-autoloader --prefer-dist \
+            --no-interaction --no-progress; \
+    fi
 COPY . .
 RUN composer dump-autoload --optimize --no-dev --no-interaction
 
 # -------------------------------------------------------------- assets --------
 FROM node:${NODE_VERSION}-alpine AS assets
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then \
+        npm ci --no-audit --no-fund; \
+    else \
+        npm install --no-audit --no-fund; \
+    fi
 COPY . .
 RUN npm run build
 
