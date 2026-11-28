@@ -39,11 +39,16 @@ jobs:
             "$RUNNER_TEMP/ctx"
 
       - name: Verify PHP extensions are present
+        # Asked of PHP itself rather than grepping `php -m`: opcache is listed as
+        # "Zend OPcache", which a plain name match misses.
         run: |
-          docker run --rm laravel/app:ci php -m | tee /tmp/mods
-          for ext in pdo_mysql redis intl bcmath gd opcache zip pcntl; do
-            grep -qi "^${ext}$" /tmp/mods || { echo "missing extension: $ext"; exit 1; }
-          done
+          docker run --rm laravel/app:ci php -r '
+            $required = ["pdo_mysql", "redis", "intl", "bcmath", "gd", "zip", "pcntl"];
+            $missing = array_filter($required, fn ($e) => !extension_loaded($e));
+            if ($missing) { fwrite(STDERR, "missing: " . implode(", ", $missing) . PHP_EOL); exit(1); }
+            if (!extension_loaded("Zend OPcache")) { fwrite(STDERR, "missing: Zend OPcache" . PHP_EOL); exit(1); }
+            echo "all required extensions loaded" . PHP_EOL;
+          '
 
       - name: Validate nginx configuration
         run: |
